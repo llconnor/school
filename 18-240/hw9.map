@@ -1,0 +1,31 @@
+Symbol definitions in order of occurence : 
+Name		Value
+----		-------
+
+LOOP		0005
+DONE		000D
+HEAD		2000
+		2001
+CALC		2100
+		2101
+RUSS		2200
+		2201
+PHYS		2300
+		2301
+MODMATH		2400
+		2401
+SUM		5000
+
+
+Pass 2 Fixup Information : 
+Address	Name
+-------	-----
+
+0001	SUM
+0003	HEAD
+0008	DONE
+2001	CALC
+2101	RUSS
+2201	PHYS
+2301	MODMATH
+

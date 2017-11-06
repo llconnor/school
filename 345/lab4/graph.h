@@ -1,0 +1,115 @@
+/*  Larry L. Connor
+ *  3/14/99
+ *  graph.h  (templated header file for Graph class)
+ *
+ *  The implementation for this class is in graph.cc
+ *
+ *  The graph class is a class that is used for building a graph out of a file.
+ *  Essentially this implementation is an array of linked lists.
+ *  This class also includes an algorithm for finding the shortest path
+ *  between any two nodes (Path).
+ *
+ *  Included classes:
+ *  Graph: This contains a vector of Alists.
+ *  Alist: This is basically a Linkedlist class with a couple of bells and 
+ *         whistles.
+ *  Anode: These are the nodes of the Alist class.
+ *  
+ *  Included functions:
+ *  (Graph class)
+ *  This finds the shortest distance between two points in a graph.
+ *  void Paths(int vertex, int p, int destination)
+ *
+ *  This tells whether all of the nodes in the List are marked. 
+ *  bool AllMarked();
+ *
+ *  This builds the graph from a file
+ *  int Build(ifstream &infile, int source, int destination);
+ *  
+ *  This prints out the information from all of the slots in the vector.
+ *  For debugging.
+ *  void Print();
+ *
+ *  This prints out the shortest path (and distance) between two nodes.
+ *  void PrintFinal(int source, int destination, int p); 
+ *
+ *  (Alist class)
+ *  This adds a new node to the linked list in a certain slot.
+ *  int Addneighbor(int neigh, double dist, int node);
+ *
+ *  This tells whether a certain slot in the Alist is empty.
+ *  bool IsEmpty();
+ *
+ *  This tells whether a certain slot in the Alist has been visited.
+ *  bool IsMarked();
+ *
+ *  This marks a certain slot in the Alist (to tell that it was visited).
+ *  void Mark();
+ *
+ *  This prints out all neighbors from a certain slot in the Alist.
+ *  void Print(int vertex);    
+*/
+#ifndef _GRAPH_H_
+#define _GRAPH_H_
+
+//Required Libraries
+#include <iostream.h>
+#include <fstream.h>
+#include <string>
+
+//Included classes
+template <class T> class Graph;
+template <class T> class Alist;
+template <class T> class Anode;
+
+template <class T> class Graph
+{
+ private:
+  vector < Alist<int> > Lists;
+
+ public:
+  Graph(){};
+  ~Graph(){};
+  void Paths(int vertex, int p, int destination);
+  bool AllMarked();
+  int Build(FILE *infile, int source, int destination);
+  void Print(int vertex);
+  void PrintFinal(int source, int destination, int p);
+  void printpath(int curr, int vertex);
+};       
+
+template <class T> class Anode
+{
+  friend class Alist<T>;
+  friend class Graph<T>;
+ private:
+  Anode<T>* down;//The pointer to the next node in the list.
+  int hub; //The number of the neighbor of the slot in the graph.
+  double cost; //The cost of going between the two slots.
+ public:
+  Anode();
+  ~Anode();
+};
+
+template <class T> class Alist
+{
+  friend class Graph<T>;
+ private:
+  Anode<T>* head; //The first node in the list.
+  int parent; //This keeps track of the shortest path between the source and
+              //destination.
+  double distfroms; //The distance from the source.
+  int mark; //Whether the vertex has been visited.
+ public:
+  Alist();
+  ~Alist();
+  int Addneighbor(int neigh, double dist, int node);
+  //  void Insertcosts(Pque<T> &dist);
+  bool IsEmpty();
+  bool IsMarked();
+  void Mark();
+  void Print();
+};
+
+#include "graph.cc"
+#endif  

@@ -1,0 +1,274 @@
+template <class T> Pque<T>::Pque() //**************make me
+{
+  used = 0;
+}
+
+template <class T> Pque<T>::~Pque() //**************Make me
+{
+  used = 0;
+}
+
+template <class T> void Pque<T>::Addnew(T newelm, int count, int from)
+{
+  for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+    {
+      if(Table[loop] == count)
+	{
+	  if(newelm < Tree[count - 1] && newelm != -1)
+	     {
+	       //	       cout << "Updating " << count << endl;
+	       From[count - 2] = from;
+	       Update(count - 2, newelm);
+	       Organize(count - 2);
+	       Organdown(count - 2);
+	       return;
+	     }
+	  return;
+	}
+    }
+  int nextspace;
+
+  if(used == Tree.capacity())
+    Tree.push_back(0);
+  nextspace = NextEmpty();
+  Tree[nextspace] = newelm;
+  Table[nextspace] = count;
+  From[nextspace] = from;
+  Organize(used);
+  Organdown(used);
+  //  Print();
+  used++;
+}
+
+template <class T> void Pque<T>::Build(ifstream &infile)
+{
+  T holder;
+  int count = 0;
+  infile >> holder;
+  Tree.push_back(holder);
+  used++;
+  while(infile >> holder)
+    {
+      count++;
+      Tree.push_back(holder);
+      used++;
+      Organize(count);
+    }
+}
+
+template <class T> T Pque<T>::getmin()
+{
+  T returner;
+  returner = Tree[0];
+  Tree[0] = Tree[used - 1];
+  Table[0] = Table[used - 1];
+  From[0] = From[used - 1];
+  Tree[used - 1] = 0;
+  Table[used - 1] = 0;
+  From[used - 1] = 0;
+  Organize(used - 2);
+  Organdown(0);
+  used--;
+  return returner;
+}
+
+template <class T> int Pque<T>::getused()
+{
+  return used;
+}
+
+template <class T> bool Pque<T>::IsEmpty()
+{
+  if(used == 0)
+    return 1;
+  return 0;
+}
+
+template <class T> int Pque<T>::NextEmpty()
+{
+  char um;
+  for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+    {
+      if(Table[loop] == 0)
+	return loop;
+    }
+  cout << "Shit" << endl;
+  cin >> um;
+  return -1;
+}
+
+template <class T> void Pque<T>::Organdown(int place)
+{
+  T temp;
+  int holder;
+  int from;
+  while(2*place + 1 < used - 1)
+    {
+      if (2*place + 2 > used - 1)
+	{
+	  if(Tree[2*place + 1] < Tree[place])
+	    {
+	      if(Tree[2*place + 1] != 0 && Tree[2*place + 1] != -1)
+		{
+		  temp = Tree[place];
+		  holder = Table[place];
+		  from = From[place];
+		  Tree[place] = Tree[2*place + 1];
+		  Table[place] = Table[2*place + 1];
+		  From[place] = From[2*place + 1];
+		  Tree[2*place + 1] = temp;
+		  Table[2*place + 1] = holder;
+		  From[2*place + 1] = from;
+		  place = 2*place + 1;
+		}
+	      else
+		return;
+	    }
+	  else
+	    {
+	      return;
+	    }
+	}
+      else if((Tree[place] > Tree[2*place + 1]) || (Tree[place] > Tree[2*place+2]))
+	{
+	  if(Tree[2*(place) + 1] <= Tree[2*place + 2])
+	    {
+	      if(Tree[2*place + 1] != 0 && Tree[2*place + 1] != -1)
+		{
+		  temp = Tree[place];
+		  holder = Table[place];
+		  from = From[place];
+		  Tree[place] = Tree[2*place + 1];
+		  Table[place] = Table[2*place + 1];
+		  From[place] = From[2*place + 1];
+		  Tree[2*place + 1] = temp;
+		  Table[2*place + 1] = holder;
+		  From[2*place + 1] = from;
+		  place = 2*place + 1;
+		}
+	      else 
+		return;
+	    }
+	  else if(Tree[2*(place) + 1] > Tree[2*place + 2])
+	    {
+	      if(Tree[2*place + 2] != 0 && Tree[2*place + 2] != -1)
+		{
+		  temp = Tree[place];
+		  holder = Table[place];
+		  from = From[place];
+		  Tree[place] = Tree[2*place + 2];
+		  Table[place] = Table[2*place + 2];
+		  From[place] = From[2*place + 2];
+		  Tree[2*place + 2] = temp;
+		  Table[2*place + 2] = holder;
+		  From[2*place + 2] = from;
+		  place = 2*place + 2;
+		}
+	      else 
+		return;
+	    }   
+	}
+      else
+	{
+	  return;
+	}
+    }
+}
+template <class T> void Pque<T>::Organize(int place)
+{
+  T temp;
+  int holder;
+  int from;
+  while(place != 0)
+    {
+      if(Tree[place] < Tree[(place - 1) / 2])
+	{
+	  if(Tree[place] != 0 && Tree[place] != -1)
+	    {
+	      //      cout << "Switching " << Tree[place] << " " << Tree[(place - 1) / 2] << endl;
+	      //cout << "Switching " << Table[place] << " " << Table[(place - 1) / 2] << endl;
+	      temp = Tree[place];
+	      holder = Table[place];
+	      from = From[place];
+	      Tree[place] = Tree[(place - 1) / 2];
+	      Table[place] = Table[(place - 1) / 2];
+	      From[place] = From[(place - 1) / 2];
+	      Tree[(place - 1) / 2] = temp;
+	      Table[(place - 1) / 2] = holder;
+	      From[(place - 1) / 2] = from;
+	      place = ((place - 1) / 2);
+	    }
+	  
+	  else if (Tree[(place - 1) / 2] == -1)
+	    {
+	      temp = Tree[place];
+              holder = Table[place];
+	      from = From[place];
+              Tree[place] = Tree[(place - 1) / 2];
+              Table[place] = Table[(place - 1) / 2];
+	      From[place] = From[(place - 1) / 2];
+              Tree[(place - 1) / 2] = temp;
+              Table[(place - 1) / 2] = holder;
+	      From[(place - 1) / 2] = from;
+              place = ((place - 1) / 2);   
+	    }
+	  else
+	    {
+	      cout << "Trying to switch 0, -1: " << Tree[(place - 1) / 2] << endl;
+	      Print();
+	      place = ((place - 1) / 2);
+	      //	      return;
+	    }
+	}
+      else
+	place = 0;
+    }
+}
+  
+template <class T> void Pque<T>::Print()
+{
+  for(unsigned int loop = 0; loop < Tree.capacity(); loop++)
+    {
+      cout << Tree[loop] << " ";
+    }
+  cout << endl;
+  for(unsigned int loop1 = 0; loop1 < Table.capacity(); loop1++)
+    {
+      cout << Table[loop1] << " ";
+    }
+  cout << endl;
+  for(unsigned int loop2 = 0; loop2 < From.capacity(); loop2++)
+    {
+      cout << From[loop2] << " ";
+    }
+  cout << endl;
+}
+
+template <class T> void Pque<T>::PrintTable()
+{
+for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+  {
+    cout << Table[loop] << " ";
+  }
+ cout << endl;  
+}
+
+template <class T> bool Pque<T>::TableEmp()
+{
+  for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+    {
+      if(Table[loop] != 0)
+	{
+	  return 0;
+	}
+    }
+  return 1;
+}
+
+template <class T> void Pque<T>::Update(int place, T newvalue)
+{
+  //  cout << "Update " << place << " with " << newvalue << endl;
+  Tree[place] = newvalue;
+  Organize(place);
+  Organdown(place);
+}

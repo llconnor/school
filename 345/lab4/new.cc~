@@ -1,0 +1,14 @@
+#include <iostream.h>
+#include <stdlib.h>
+#include <vector.h>
+
+void main()
+{
+  vector<int> a;
+  vector<int> b(10);
+  cout << "HI" << endl;
+  cout << a.capacity() << endl;
+  a = b;
+  cout << a.capacity() << endl;
+  
+}

@@ -1,0 +1,515 @@
+/*     18-345
+*      Proj 3
+*      Larry Connor and Scott Cape
+*/
+#include <iostream.h>
+#include <unistd.h>
+#include <fstream.h>
+#include <string.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <values.h>
+#include "sock.h"
+
+static int sock;
+
+static int recv_port;
+static int send_port;
+unsigned crc = 0;
+
+/************************************************************************/
+int yes_no( double prob ) {
+  double r;
+
+  r = (double)random()/MAXLONG;
+  return( (r <= prob) );
+}
+
+/************************************************************************/
+int r_range( int max ) {
+  double r;
+  int i;
+
+  r = (double)random()/MAXLONG*max;
+  i = r;
+  return( i );
+}
+
+/************************************************************************/
+int init_sock( int mode )
+{
+  char               hostname[MAX_STR_LEN];
+  int                host_addr_len;
+  struct hostent     *hostentry;
+  struct sockaddr_in *host_addr;
+  struct timeval     tp;
+
+  /* Set up the send and recv ports */
+  if (mode == SERVER_MODE) {
+    send_port = CLIENT_PORT;
+    recv_port = SERVER_PORT;
+  } else {
+    send_port = SERVER_PORT;
+    recv_port = CLIENT_PORT;
+  }
+
+  /* Initialize data structures */
+  host_addr = (struct sockaddr_in *)malloc( sizeof( struct sockaddr_in ) );
+  if (!host_addr)
+    { fprintf( stderr, "Unable to allocate memory.\n" ); exit( 1 ); }
+
+  /* Create the socket */
+  if ((sock = socket( AF_INET, SOCK_DGRAM, 0 ))==-1)
+    { perror( "socket " ); exit( -1 ); }
+
+  /* Get the local hostname and bind the socket */
+  gethostname( hostname, MAX_STR_LEN );
+  hostentry = gethostbyname( hostname );
+  host_addr->sin_family = hostentry->h_addrtype;
+  if (mode == SERVER_MODE)
+    host_addr->sin_port = htons( SERVER_PORT );
+  else
+    host_addr->sin_port = htons( CLIENT_PORT );
+  bcopy( hostentry->h_addr, &host_addr->sin_addr.s_addr,
+         hostentry->h_length );
+  host_addr_len = sizeof( struct sockaddr_in );
+  if (bind( sock, (struct sockaddr *)host_addr, host_addr_len )==-1)
+    { perror( "init_sock " ); exit( -1 ); }
+
+  /* Initialize the random number generator */
+  gettimeofday( &tp, NULL );
+  srandom( tp.tv_sec ^ tp.tv_usec );
+
+  free( host_addr );
+
+  return( sock );
+}
+/************************************************************************/
+unsigned get_addr_by_name( char *hostname )
+{
+  struct hostent *hostentry;
+
+  hostentry = gethostbyname( hostname );
+  if (!hostentry)
+    return( 0xffffffff );
+
+  return( ntohl( *(unsigned*)hostentry->h_addr_list[0] ) );
+}
+
+/************************************************************************/
+int send_packet(
+    char     *p_data,
+    int      p_length,
+    unsigned address )
+{
+  struct sockaddr_in *dest_addr;
+  int                dest_addr_len;
+
+  /* Check input values */
+  if (!p_data)
+    return( -1 );
+  if (p_length>MAX_PACKET_LEN)
+    return( -1 );
+
+  /* Create the data structures */
+  dest_addr = (struct sockaddr_in *)malloc( sizeof( struct sockaddr_in ) );
+  if (!dest_addr)
+    { fprintf( stderr, "Unable to allocate memory.\n" ); exit( 1 ); }
+
+  /* Set up the address */
+  dest_addr->sin_family = AF_INET;
+  dest_addr->sin_port = htons( send_port );
+  dest_addr->sin_addr.s_addr = htonl( address );
+  dest_addr_len = sizeof( struct sockaddr_in );
+
+  /* Send the packet */
+  if (sendto( sock, p_data, p_length, 0, (struct sockaddr *)dest_addr, dest_addr_len )==-1)
+    { perror( "send_sdlp_packet " ); exit( 1 ); }
+
+  /* Free up the data structures */
+  free( dest_addr );
+
+  return( 0 );
+}
+
+/************************************************************************/
+int recv_packet(
+    char               *p_data,
+    int                *p_length,
+    float              t_out )
+{
+  struct sockaddr_in *source_addr;
+  int                source_addr_len;
+  fd_set             readfds[1];
+  int                i;
+  int                nfds;
+  char               buf[MAX_PACKET_LEN];
+  int                buflen = MAX_PACKET_LEN;
+  int                datalen;
+  struct timeval     timeout;
+  int                error;
+
+  /* Check input values */
+  if (!p_data)
+    return( -1 );
+
+  /* Create the data structures */
+  source_addr = (struct sockaddr_in *)malloc( sizeof( struct
+sockaddr_in ) );
+  if (!source_addr)
+    { fprintf( stderr, "recv_packet : out of memory\n" ); return( -1 ); }
+  nfds = getdtablesize();
+
+  timeout.tv_sec = t_out;
+  timeout.tv_usec = (t_out - timeout.tv_sec)*100000;
+
+  FD_ZERO( readfds );
+  FD_SET( sock, readfds );
+
+  /* Wait for socket to have a packet */
+  error = select( nfds, readfds, 0, 0, &timeout );
+  if (error==-1)
+    { perror( "recv_packet " ); exit( 1 ); }
+  if (error==0)
+   return( ERR_TIMEOUT );
+
+  source_addr->sin_family      = AF_INET;
+  source_addr->sin_port        = htons( recv_port );
+  source_addr->sin_addr.s_addr = INADDR_ANY;
+  source_addr_len = sizeof( struct sockaddr_in );
+
+  datalen = recvfrom( sock, buf, buflen, 0, (struct sockaddr *)source_addr, &source_addr_len );
+  if (datalen==-1)
+    { perror( "recv_packet " ); exit( 1 ); }
+
+#ifdef DEBUG
+  printf( "Packet received from 0x%8x, Payload type 0x%2x\n",
+          ntohl( *(unsigned *)(buf+4) ), buf[8] & 0xff );
+#endif
+
+  for (i=0;i<(buflen*8);i++)
+    if (yes_no(CORRUPT_PROB)) {
+#ifdef DEBUG
+      printf( "Bit corrupted\n" );
+#endif
+      buf[i/8] ^= (1 << (i%8));
+    }
+
+  *p_length = datalen;
+  bcopy( buf, p_data, *p_length );
+
+  free( source_addr );
+
+  /* There's a packet, but we're going to drop it */
+  if (yes_no(DROP_PROB)) {
+#ifdef DEBUG
+    printf( "Packet dropped.\n" );
+#endif
+    return( ERR_TIMEOUT );
+  }
+
+  return( 0 );
+}
+
+int
+check_crc(unsigned char *p)
+{
+
+  unsigned char y;
+  int i, j, xor;
+  
+  crc = 0;
+
+  for (i = 0; i < 271; i++) {
+    y = p[i];
+    for(j = 0; j < 8; j++) {
+      /* If MSb of CRC is 1, then we need to XOR after the shift */
+      xor = crc & 0x80000000;
+      
+      /* shift CRC, this makes LSb 0 */
+      crc = crc << 1;
+      
+      /* if MSb of data is 1, set LSb of CRC */
+      if (y & (unsigned char)0x80)
+	crc = crc | 0x00000001;
+      
+      /* do the XOR if needed */
+      if (xor)
+	crc = crc ^ CRC32;
+      
+      /* shift out MSb of y */
+      y = y << 1;
+    }
+  }
+//  printf("CRC: %X\n", crc);
+  return (crc ? 0 : 1);
+}
+
+void send_pack(char pack_type, char pack_data[], str_packet &data, int sequence, int length)
+{
+  unsigned char dataarr[275];
+  data.LENGTH = 0;
+  data.SEQ = 0;
+  data.ACK = 0;
+  for(int loop = 0; loop < length; loop++)
+    dataarr[loop + 12] = pack_data[loop]; 
+  if(pack_type == 'r')
+    {
+      data.PT = C_REQUEST;
+      //      errorint = send_packet(p_data, len, addr);
+    }
+  else if (pack_type == 'c')
+    {
+      data.PT = C_CONFIRM;
+    }
+  else if (pack_type == 't')
+    {
+      data.PT = T_CLOSE;
+    }
+  else if (pack_type == 'T')
+    {
+      data.PT = T_CONFIRM;
+    }
+  else if (pack_type == 'd')
+    {
+      data.PT = D_DATA;
+      data.LENGTH = length;
+    }
+  else if (pack_type == 'a')
+    {
+      data.PT = D_ACK;
+      data.ACK = sequence;
+    }
+  else if (pack_type == 'n')
+    {
+      data.PT = D_NACK;
+      data.ACK = sequence;
+    }
+  check_crc(dataarr);
+/*  cout << "Orig crc " << crc << endl;
+  for(int i = 0; i < 8; i++)
+    data.CRC[3] = crc >> ;
+  for(int j = 0; j < 8; j++)
+    data.CRC[2] = crc << 1;
+  for(int k = 0; k < 8; k++)
+    data.CRC[1] << crc;
+  for(int l = 0; l < 8; l++)
+    data.CRC[1] << crc;
+  cout << "New crc " << data.CRC[3] << data.CRC[2] << data.CRC[1] << data.CRC[0] << endl;*/
+}
+
+int fill_data(str_packet &sender, ifstream &infile)
+{
+  int loop;
+
+  for(loop = 0; loop < 255 && infile >> sender.data[loop]; loop++)
+    {
+    }
+  sender.LENGTH = loop;
+  if(loop == 0)
+    return 0;
+
+  return 1;  
+}
+
+int main()
+{  
+  char *p_data;
+  char data[275];
+  int packtype, packlength;
+  int len;
+  int *length;
+  int sizerec;
+  int numbadpackets = 0;
+  unsigned addr, thisaddr;
+  int errorint;
+  char thisname[255];
+  int thisnamelen;
+  char servername[255];
+  str_packet sender;
+  ifstream infile;
+
+  gethostname(thisname, thisnamelen); 
+  thisaddr = htonl(get_addr_by_name(servername));
+  cout << "What computer would you like to connect to?" << endl;
+  cin >> servername;
+  addr = get_addr_by_name(servername); 
+//  if(addr = 0xFFFFFFFF) 
+//    cout << "Address Not Found" << endl;
+//  else
+//    {
+  infile.open("University_Center.gif", ios::in);
+      sender.dest = htonl(addr);
+      sock = init_sock(CLIENT_MODE);
+      
+      sender.dest = addr;
+      sender.source = thisaddr;
+      
+      sender.data[0] = 'U';
+      sender.data[1] = 'n';
+      sender.data[2] = 'i';
+      sender.data[3] = 'v';
+      sender.data[4] = 'e';
+      sender.data[5] = 'r';
+      sender.data[6] = 's';
+      sender.data[7] = 'i';
+      sender.data[8] = 't';
+      sender.data[9] = 'y';
+      sender.data[10] = '_';
+      sender.data[11] = 'C';
+      sender.data[12] = 'e';
+      sender.data[13] = 'n';
+      sender.data[14] = 't';
+      sender.data[15] = 'e';
+      sender.data[16] = 'r';
+      sender.data[17] = '.';
+      sender.data[18] = 'g';
+      sender.data[19] = 'i';
+      sender.data[20] = 'f';
+
+      for(int startloop = 21; startloop < 255; startloop++)
+	sender.data[startloop] = 0;
+
+      cout << sender.data << endl;
+
+      send_pack('r', data, sender, 0, 0);
+      
+      for(int loop = 0; loop < 5; loop++)
+	{
+	  cout << "Into loop" << endl;
+	  if(recv_packet(data, length, 1) == 0 && check_crc(data) == 1)
+	    {
+	      if(data[8] = C_CONFIRM)
+		{
+		  break;
+		}
+	    }
+	  else
+	    {
+	      cout << "C_CONFIRM Failed" << endl;
+	    }
+	  for(long timeloop = 0; timeloop < 40000000; timeloop++) //+/- 3sec
+	    timeloop = timeloop;
+	}
+  int sequence = 0;
+  while(1)
+    {
+      if(fill_data(sender, infile) == 1)
+	{
+	  send_pack('d', data, sender, sender.LENGTH, sequence % 6);
+	  sequence++;
+	  if(fill_data(sender, infile) == 1)
+	    {
+	      send_pack('d', data, sender, sender.LENGTH, sequence % 6);
+	      sequence++;
+	      if(fill_data(sender, infile) == 1)
+		{
+		  send_pack('d', data, sender, sender.LENGTH, sequence % 6);
+		  sequence++;
+		  if(recv_packet(data, length, 1) == 0 && check_crc(data))
+		    {		  
+		      if(data[8] == D_ACK && data[10] == sequence - 1)
+			{
+			  if(recv_packet(data, length, 1) == 0 && check_crc(data))
+			    {
+			      if(data[8] == D_ACK && data[10] == sequence)
+				{
+				  if(recv_packet(data, length, 1) == 0 && check_crc(data))
+				    {
+				      if(data[8] == D_ACK && data[10] == sequence + 1)
+					{
+					} //All three were okay
+				      else
+					sequence = data[10]; //D_NACK or random pack
+				    }
+				  else
+				    sequence -= 1;// timeout
+				}
+			      else
+				sequence = data[10]; //D_NACK
+			    }
+			  else
+			    sequence -= 2; //timeout
+			}	  
+		      else
+			sequence = data[10]; //D_NACK
+		    }
+		  else
+		    sequence -= 3;//timeout
+		}
+	      else //If only two packets could be sent
+		{
+		  if(recv_packet(data, length, 1) == 0 && check_crc(data))
+		    {
+		      if(data[8] == D_ACK && data[10] == sequence)
+			{
+			  if(recv_packet(data, length, 1) == 0 && check_crc(data))
+			    {
+			      if(data[8] == D_ACK && data[10] == sequence + 1)
+				{
+				  break;
+				}
+			      else //Incorrect ACK
+				sequence -= 2;
+			    }
+			  else //D_NACK
+			    sequence = data[10];
+			}
+		      else
+			sequence -= 1;
+		    }
+		  else
+		    sequence = data[10];
+		}
+	    }
+	  else //If only one packet could be sent
+	    {
+	      if(recv_packet(data, length, 1) == 0 && check_crc(data))
+		{
+		  if(data[8] == D_ACK && data[10] == sequence)
+		    break;
+		  else //Incorrect ACK
+		    sequence -= 1;
+		}
+	      else
+		sequence = data[10];
+	    }
+	}
+      else
+	break;
+    }
+  for(int closeloop = 0; closeloop < 5; closeloop++)
+    {
+      send_pack('t', data, sender, 0, 0);
+      if(recv_packet(data, length, 1) == 0 && check_crc(data))
+	{
+	  if(data[8] = T_CONFIRM)
+	    {
+	      return 0;
+	    }
+	}
+      for(int timerloop = 0; timerloop < 30000000; timerloop++)
+	timerloop = timerloop;
+    }
+//    }
+  return 1;
+}
+
+/*struct str_packet{
+
+  //  in_addr_t dest;
+  //  in_addr_t source;
+  unsigned char PT;
+  unsigned char SEQ;
+  unsigned char ACK;
+  unsigned char LENGTH;
+  char data[255];
+  unsigned char CRC[4];
+
+}str_packet;*/
+
+

@@ -1,0 +1,77 @@
+
+Questions for 15-211 
+Assignment 4:  Shortest Path Algorithm and Priority Queues
+
+---------------------------------------------------------------------------
+
+Please enter the appropriate answers in the lines below.  Write a
+single number; if you have comments, place them at the end of this file.
+
+
+Time spent:     in hours.
+Difficulty:     1 = too easy, 5 = too hard.
+Satisfaction:   1 = not at all, 5 = completely.
+
+
+Please, pretty please, just write a single number, no `hours', `hrs', 
+`approx', `4-5', nothing, just a number. 
+
+:TIME:		 25
+:DIFFICULTY:	2
+:SATISFACTION:	4
+
+
+---------------------------------------------------------------------------
+Questions
+---------
+
+
+1.  Analyze the running time of your program in terms of the number n 
+of vertices, and the number e of edges in the graph.  Split the time 
+into two components:  the time needed to build the graph (including 
+the error checks), and the time to compute the distance from s to t. 
+
+Build Time: 4 original error checks + n error checks (for < 0 costs) + n adds.
+Add Time: n
+Total Build Time: n^2 + n + 4 = Theta(n^2).
+
+Paths Time:
+
+2. What would happen to your algorithm if we would allow negative edge 
+costs?  This makes no sense for geometric distances, but one can use 
+graphs to model all kinds of situations (e.g., negative costs might 
+mean that one loses money in some transaction). 
+
+If the graph had negative edges then you may end up with an infinite loop.
+For example if you had a graph with 1->2 (-1) 2->3 (-1) 3->1 (-1) and
+ran the algorithm the first time through the loop the program would compute
+all of the distances to be -1 (this is assuming we define something else as
+infinity of course) then when it evaluated the next node (1->2) it would 
+check to see if -1 < -1 + cost(x,y) (in this case the cost would be -1) so it
+would evaluate false and the new distance would be added to the pque and the
+program would continue indefinetely and the distances between the nodes would
+keep decreasing.
+
+3. Suppose all edge costs are equal to 1.  Explain how breadth-first-search 
+can be used to compute distances in this case. 
+
+The algorithm that we used for this program was nothing more than a breadth
+first search that accounted for the possibility of different distances between
+nodes.  In the case that all of the distances between the nodes were the same
+the shortest distance would be the one with the least number of nodes between
+the destination and the source.  So with a breadth first search you would
+"walk" down the tree and look at each node in turn.  Thus once you reached an
+unmarked node you would know that you also had the shortest distance between
+the source and the node.  A breadth first search doesn't work with different
+costs because there may be a different path to a node that goes through more
+nodes, but results in a shorter path.
+
+---------------------------------------------------------------------------
+
+Comments:
+
+An explaination of Dijkstra's algorithm during lecture would have been helpful.
+In order to figure out how to implement the algorithm I had to look it up in
+the text for Algorithm's.
+
+

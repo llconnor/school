@@ -1,0 +1,374 @@
+/*  Larry L. Connor
+ *  3/15/99
+ *  pque.cc  -- Implementation for the priority queue (pque) class
+ *
+ *  The function prototypes for this class are in pque.h
+ *
+*/
+
+//Constructor for the Pque class.
+template <class T> Pque<T>::Pque()
+{
+  used = 0;
+}
+
+//Destructor for the Pque class.
+template <class T> Pque<T>::~Pque()
+{
+  used = 0;
+}
+
+//This adds a new element to the Pque (and updates Table[] and From[])
+template <class T> void Pque<T>::Addnew(T newelm, int count, int from)
+{
+
+  //Walk through the queue and look for the element.
+  for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+    {
+      if(Table[loop] == count)
+	{
+	  //If the element is in the tree then if it needs to be updated
+	  //update it...otherwise just leave.
+	  if(newelm < Tree[count - 1] && newelm != -1)
+	     {
+	       From[count - 2] = from;
+	       Update(count - 2, newelm);
+	       Organize(count - 2); //Reorganize the list.
+	       Organdown(count - 2);
+	       return;
+	     }
+	  return;
+	}
+    }
+
+  //If the element is not in the queue
+  int nextspace;
+  if(used == Tree.capacity()) //If the queue is full make...more space
+    {
+      // cout << "Push Back" << endl;
+      if(Tree.capacity() > 0 && Tree[used - 1] != -1)
+	{
+	  //  cout << "Tree =" << Tree[used - 1] << endl;
+	  double temp = Tree[used - 1];
+	  Tree.push_back(-1);
+	  Tree.push_back(-1);
+	  Tree[used - 1] = temp;
+	}
+      else
+	Tree.push_back(-1);
+      //      Print();
+    }
+
+  //cout << "Through " << endl;
+  char fake;
+  //cin >> fake;
+  //Find the next empty space
+  nextspace = used;
+
+  //And update everything.
+  Tree[nextspace] = newelm;
+  Table[nextspace] = count;
+  From[nextspace] = from;
+
+  //Then reorganize
+  //  cout << "before org ";
+  //Print();
+  Organize(used);
+  Organdown(used);
+  //Print();
+  used++;
+  //cout << "Used = " << used << endl;
+}
+
+template <class T> int Pque<T>::FromFirst()
+{
+  return From[0];
+}
+
+template <class T> void Pque<T>::FromTablesize(int newsize)
+{
+  vector<int> v(newsize);
+  Table = v;
+  From = v;
+}
+
+//This returns the smallest distance in the pque.
+template <class T> T Pque<T>::getmin()
+{
+  T returner;
+  
+  //The minimum distance is at the beginning.
+  returner = Tree[0];
+
+  //Switch the top with the bottom (for ease in removal)
+  Tree[0] = Tree[used - 1];
+  Table[0] = Table[used - 1];
+  From[0] = From[used - 1];
+  Tree[used - 1] = -1;
+  Table[used - 1] = -1;
+  From[used - 1] = -1;
+
+  //And reorganize the queue.
+  Organize(used - 2);
+  Organdown(0);
+  used--;
+  return returner; //Finally return the value.
+}
+
+//This returns the number of slots in the pque that have been used.
+template <class T> int Pque<T>::getused()
+{
+  return used;
+}
+
+//This tells whether the pque is empty.
+template <class T> bool Pque<T>::IsEmpty()
+{
+  if(used == 0)
+    return 1;
+  return 0;
+}
+
+//This moves and element down the tree (if it is bigger then its kids).
+template <class T> void Pque<T>::Organdown(int place)
+{
+  //Holding values (for switching).
+  T temp;
+  int holder;
+  int from;
+
+  //While we are within the valid ranges of the priority queue.
+  while(2*place + 1 < used - 1)
+    {
+      //If the right child doesn't exist, but the left one does.
+      if (2*place + 2 > used - 1)
+	{
+
+	  //If the value is greater than it's left child
+	  if(Tree[2*place + 1] < Tree[place])
+	    {
+	      //And the child is not infinity...switch them.
+	      if(/*Tree[2*place + 1] != 0 && */Tree[2*place + 1] != -1)
+		{
+		  if ((2*place + 1) < Tree.size() + 1)
+		    {
+		      //Switch
+		      temp = Tree[place];
+		      holder = Table[place];
+		      from = From[place];
+		      Tree[place] = Tree[2*place + 1];
+		      Table[place] = Table[2*place + 1];
+		      From[place] = From[2*place + 1];
+		      Tree[2*place + 1] = temp;
+		      Table[2*place + 1] = holder;
+		      From[2*place + 1] = from;
+		      
+		      //And update our current location.
+		      place = 2*place + 1;
+		    }
+		  else
+		    {
+		      cout << "Skip" << endl;
+		      return;
+		    }
+		}
+	      else //If we didn't switch leave.
+		return;
+	    }
+	  else //If we didn't switch...leave.
+	    {
+	      return;
+	    }
+	}
+      //If both children exist.
+      else if((Tree[place] > Tree[2*place + 1]) || (Tree[place] > Tree[2*place+2]))
+	{
+	  //And the left child is less then the right.
+	  if(Tree[2*(place) + 1] <= Tree[2*place + 2])
+	    {
+	      //And the left child is not equal to infinity
+	      if(/*Tree[2*place + 1] != 0 && */Tree[2*place + 1] != -1)
+		{
+		  if((2*place + 1) < Tree.size() + 1)
+		    {
+		      //switch
+		      temp = Tree[place];
+		      holder = Table[place];
+		      from = From[place];
+		      Tree[place] = Tree[2*place + 1];
+		      Table[place] = Table[2*place + 1];
+		      From[place] = From[2*place + 1];
+		      Tree[2*place + 1] = temp;
+		      Table[2*place + 1] = holder;
+		      From[2*place + 1] = from;
+		      
+		      //and update our current location.
+		      place = 2*place + 1;
+		    }
+		  else
+		    {
+		      cout << "Skip" << endl;
+		      return;
+		    }
+		}
+	      else //If we don't switch then exit.
+		return;
+	    }
+
+	  //If the right child is less then the left.
+	  else if(Tree[2*(place) + 1] > Tree[2*place + 2])
+	    {
+	      //And it is not equal to infinity.
+	      if(/*Tree[2*place + 2] != 0 && */Tree[2*place + 2] != -1)
+		{
+		  if((2*place + 2) < Tree.size() + 1)
+		    {
+		      //Switch the two
+		      temp = Tree[place];
+		      holder = Table[place];
+		      from = From[place];
+		      Tree[place] = Tree[2*place + 2];
+		      Table[place] = Table[2*place + 2];
+		      From[place] = From[2*place + 2];
+		      Tree[2*place + 2] = temp;
+		      Table[2*place + 2] = holder;
+		      From[2*place + 2] = from;
+		      
+		      //and update our current location.
+		      place = 2*place + 2;
+		    }
+		  else
+		    {
+		      cout << "Skip" << endl;
+		      return;
+		    }
+		}
+	      else //If we didn't switch exit.
+		return;
+	    }   
+	}
+      else //If we didn't switch...exit.
+	{
+	  return;
+	}
+    }
+}
+
+//This is a promote function.
+template <class T> void Pque<T>::Organize(int place)
+{
+  T temp;
+  int holder;
+  int from;
+
+  //while we are within the bounds of the array
+  while(place != 0)
+    {
+      //If a child is less than its parent
+      if(Tree[place] < Tree[(place - 1) / 2])
+	{
+	  //and the child is not infinity.
+	  if(/*Tree[place] != 0 && */Tree[place] != -1)
+	    {
+	      if(place < Tree.size() + 1)
+		{
+		  //switch
+		  temp = Tree[place];
+		  holder = Table[place];
+		  from = From[place];
+		  Tree[place] = Tree[(place - 1) / 2];
+		  Table[place] = Table[(place - 1) / 2];
+		  From[place] = From[(place - 1) / 2];
+		  Tree[(place - 1) / 2] = temp;
+		  Table[(place - 1) / 2] = holder;
+		  From[(place - 1) / 2] = from;
+		  
+		  //and update
+		  place = ((place - 1) / 2);
+		}
+	      else
+		{
+		  cout << "Skip" << endl;
+		  return;
+		}
+	    }
+	  
+	  //If the parent is equal to infinity
+	  else if (Tree[(place - 1) / 2] == -1)
+	    {
+	      //Switch
+	      temp = Tree[place];
+              holder = Table[place];
+	      from = From[place];
+              Tree[place] = Tree[(place - 1) / 2];
+              Table[place] = Table[(place - 1) / 2];
+	      From[place] = From[(place - 1) / 2];
+              Tree[(place - 1) / 2] = temp;
+              Table[(place - 1) / 2] = holder;
+	      From[(place - 1) / 2] = from;
+              
+	      //and update our current location
+	      place = ((place - 1) / 2);   
+	    }
+	  else //This is a catch all (for any weird errors).
+	    {
+	      place = ((place - 1) / 2);
+	      Organdown(0);
+	    }
+	}
+      else //If we didn't switch then leave.
+	place = 0;
+    }
+}
+  
+//This prints out all of the members of Tree, Table and Loop (for debugging).
+template <class T> void Pque<T>::Print()
+{
+  for(unsigned int loop = 0; loop < Tree.capacity(); loop++)
+    {
+      cout << Tree[loop] << " ";
+    }
+  cout << endl;
+  for(unsigned int loop1 = 0; loop1 < Table.capacity(); loop1++)
+    {
+      cout << Table[loop1] << " ";
+    }
+  cout << endl;
+  for(unsigned int loop2 = 0; loop2 < From.capacity(); loop2++)
+    {
+      cout << From[loop2] << " ";
+    }
+  cout << endl;
+}
+
+//This tells whether the Table is empty (used in the shortest path algor.)
+template <class T> bool Pque<T>::TableEmp()
+{
+  for(unsigned int loop = 0; loop < Table.capacity(); loop++)
+    {
+      //If we find a value that is non-zero then the Table is not empty.
+      if(Table[loop] != 0)
+	{
+	  //Then the table is not empty.
+	  return 0;
+	}
+    }
+  return 1;
+}
+
+//returns the first element of Table
+template <class T> int Pque<T>::TableFirst()
+{
+  return Table[0];
+}
+
+//This is for changing a value in the priority queue.
+template <class T> void Pque<T>::Update(int place, T newvalue)
+{
+  //Set the new value
+  Tree[place] = newvalue;
+  
+  //and reorganize the list.
+  Organize(place);
+  Organdown(place);
+}

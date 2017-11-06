@@ -1,0 +1,410 @@
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+<head>
+<title>15-211:  Assignment 4</title>
+</head>
+
+<body bgcolor=white>
+<h4><font color="blue">15-211</font></h4>
+
+<center>
+<h1>Assignment 4
+<p>
+<font size="+2">Getting around:  a path finding program</font>
+</h1>
+<h4>Due Thursday, 11:59:59 pm, March 18, 1999</h4>
+</center>
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+
+<h2>Description</h2>
+
+Anyone who happens not to be an <i>n</i>th generation Pittsburgher,
+for large values of <i>n</i>, knows that it is often impossible
+to get from point A to point B in this town.
+A little electronic help is called for: a program which, given a source
+point A and a target point B, will find the shortest possible route
+from A to B.
+<p>
+
+To simplify things considerably, we won't make an attempt to base our
+program on a real map of P'gh (which is probably a fractal of dimension
+2.789), but instead use some artificial directed graphs whose edges
+are labeled by positive real numbers.
+Your program will read in a data file that describes the graph,
+as well as a source and target vertex.
+In response, the program prints the distance between the two vertices,
+and, optionally, a shortest path from one to the other.
+Internally, the program uses a graph exploration algorithm known as
+Dijkstra's shortest path algorithm, see below for an explanation.
+You might also wish to read chapter 15.4 in your book for more information.
+<p>
+
+The key ingredient for the algorithm is a priority queue that is used
+to keep track of the nearest vertices in the graph.
+<p>
+
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h2>Data Structures &amp; Algorithms</h2>
+
+First off, you need to implement a directed graph class.
+The class has to contain an adjacency list as well as information about
+the cost of each edge.
+Here is the class definition in my solution:
+<pre>
+class  Graph
+{
+    AdjacencyLists   A;
+public:
+    Graph() {}
+    Graph( int n ): A(n) {}
+    void   set_size( int n );
+    void   insert( int a, int b, float x );
+    float  distance( int a, int b, list<int>& P ) const;
+    bool   edge( int a, int b ) const;
+    int    size() const { return A.size(); }
+};
+
+</pre>
+For example, the second constructor builds a graph with n nodes, but no edges.
+The insert operation adds an edge from x to y of cost d.
+The distance function returns the length of a shortest path from
+s to t, as computed by Dijkstra's algorithm, and deposits a  
+shortest path in the list P (a list of integers, which could be implemented
+as  <code>list&lt;int&gt;</code> using the STL, you can also use
+your own if you prefer). 
+This is one plausible line of attack, but there are many others.
+<p>
+
+In order to calculate distances (and shortest paths), you will need a priority
+queue, a data structure that supports an insert operation, a delete_min operation,
+and a promote operation.
+Here is the outline of the algorithm.
+Suppose n is the number of vertices in the graph. 
+We maintain an array <code>float  dist[n]</code> that contains our current
+estimate for the distance from the source vertex s:  <code>dist[t]</code>
+is the distance from s to t.
+We write  <code>cost(x,y)</code> for the cost of the edge (x,y), though
+in your program you should not implement this as an actual function call. 
+This distance is used to organize the priority queue. 
+<p>
+
+<pre>
+        dist[s] = 0;
+        insert s into Q
+
+        while( ! Q.empty() )
+        {
+              u = Q.delete_min();
+              for each edge  (u,v)  do
+                    if(  dist[u] + cost(u,v) < dist[v] )
+                    {
+                         dist[v] = dist[u] + cost(u,v);
+                         insert/promote v in Q
+                    }
+        }
+</pre>
+
+Thus, the first choice of u will be s itself.
+All vertices v such that there is an edge (s,v) will be inserted into Q, and
+one with a cheapest possible edge cost is chosen next.
+Then we encounter the neighbors of that vertex, 
+and so on and so forth.
+In the end, <code>dist[x]</code> will be the true distance from s to x,
+for all vertices x. 
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h2>Interface</h2>
+
+Make sure to adhere to the description given below in every little detail.
+Our testing scripts will not work unless you program behaves precisely as
+explained here, and you will lose credit. 
+
+<p>
+
+<ol>
+
+  <li>In plain mode, a call
+      <pre>
+      > shortest  infile src trg 
+      </pre>
+      will read the graph stored in infile, and then compute the distance from
+      src to trg (positive integers in the appropriate range). 
+      Likewise, a call
+      <pre>
+      > shortest  -p infile src trg 
+      </pre>
+      will cause a shortest path to be displayed in addition to the distance.  
+
+      <p>
+
+      For example, for the file <code>graph3</code> provided on the server,
+      we get
+
+      <pre>
+      hw4 620 >shortest graph3 1 8
+      11.2
+      hw4 621 >shortest -p graph3 1 8
+      11.2
+      1  4  5  8  
+      hw4 622 >shortest -p graph3 1 7
+      infinity
+      </pre>
+
+      Hence, there is no path from vertex 1 to vertex 7 in the graph.
+      <p>
+
+      
+  <li>The format of the input file is as follows:
+
+      <pre>
+      GRAPH
+      5
+      1  2  1.5
+      2  3  2.0
+      3  4  0.5
+      4  1  .9999
+      5  1  1.9999
+      5  2  2.0
+      </pre>
+
+      This would epresent a graph on 5 vertices,
+      consisting of a square (on 1,2,3,4) and
+      two extra edges from vertex 5 to the square. The edge costs are random. 
+      <p>
+
+      Thus, the first line in the data file contains the keyword <code>GRAPH</code>,
+      the second line contains a single integer, the number of vertices,
+      and the following lines contain adjacency information and the cost of
+      the edges. <p>
+
+      
+  <li>Since there are ample opportunities for incorrect data in this assignment,
+      be particularly careful in checking the input.
+      For example, test if the source and target vertices are in the proper range.
+      Also, while reading the graph input file, test that the edge
+      costs are all positive.
+      If the data file contains multiple occurences of the same edge
+      (possibly with different costs), your program must complain and quit. 
+      However, you don't have to worry about parsing files of the wrong form:
+      if the input file is does not conform to our standard, your program
+      may fail in arbitrary ways (e.g., the keyword GRAPH might be missing). 
+      <p>
+
+      You also have to check that the vertices given on the commandline are
+      in the proper range.
+      Complain and exit if they are not.
+      <p>
+
+</ol>
+
+
+
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h4>Nitty-gritty</h4>
+
+<ul>
+  <li>
+      You can use the STL <code>vector</code> and <code>list</code> classes
+      (e.g., for the adjacency lists in your graph class)
+      but you must write your own priority queue implementation.
+      Make sure that all the operations are logarithmic in the size of the queue. <p>
+      <p>
+
+  <li>
+      Keep your directed class graph simple.
+      A reasonable way to store the costs for the edges is to place the corresponding
+      float right in the adjacency list (modify the nodes correspondingly).
+      You must be able to access the edge costs in O(1) time, given the edge. 
+      <p>
+
+  <li>There is a little glitch in dealing with infinite costs:  we are using
+      floats to represent real numbers, and floats do not allow for a value of
+      infinity.
+      You can hack around this problem in several ways.
+      A particularly nasty solution is to use -1 to represent infinity.
+      Or you could use a special class <code>Real</code> that behaves
+      properly.
+      <p>
+      Take your pick.
+      <p>
+
+
+  <li>
+      Make sure that your program returns <code>infinity</code> when
+      the query involves a target vertex that is not reachable from the source.
+      In path mode, the program should print out no path, only <code>infinity</code>.
+
+<p>
+  <li>Again, think about the Knuth Trip Test:
+      what to do with empty graphs, graphs with just one vertex,
+      graphs with no edges, ...
+      We will test all these cases. 
+      <p>
+
+</ul>
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h2>Files</h2>
+
+Write files  <code>pqueue.h</code>, <code>pqueue.cc</code>, 
+<code>graph.h</code>  and <code>graph.cc</code>
+that implement your priority queues graphs, respectively. 
+Then write a main file <code>shortest.cc</code>
+that reads the input file and provides the user interface. 
+<p>
+
+However, you may prefer to split up your code into more compilation units. 
+If you decide to do this, you must modify the makefile correspondingly. 
+When we test your code, it must suffice to type <code>make</code> to get 
+the executable, whatever compilation steps may be necessary to 
+produce them. 
+<p>
+
+Files on the server:
+
+<blockquote>
+<ul>
+  <li><a href=graph1>graph1</a> A path of length 10.
+  <li><a href=graph2>graph2</a> A cycle of length 10. 
+  <li><a href=graph3>graph3</a> A 3 x 3 grid, plus some extra edges:
+
+      <img align="middle" src="3by3.gif"width=300 height=300 >
+      <p>
+
+  <li><a href=Makefile>Makefile</a>
+  <li><a href=questions.txt>questions.txt</a>
+</ul>
+</blockquote>
+
+There are compiled versions of the program at 
+<a href=shortest.linux>shortest.linux</a> and
+<a href=shortest.sun>shortest.sun</a>
+that you can use to compare your output to ours. 
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h3>Procedures</h3>
+<ol>
+  <li>
+      Copy the files in
+      <code>/afs/andrew/course/15/211-1/Homework/hw4</code> to a directory 
+      of your own, e.g. by shift-clicking on the links above.
+      Make sure the directory is not readable by others.  If you 
+      are not sure how to do this, go to <a href=http://polaris.andrew.cmu.edu>
+      polaris.andrew.cmu.edu</a> and search for "directory protection".
+      <p>
+
+  <li>Answer all the questions in <code>questions.txt</code>.
+      Make sure to give us some feedback on the amount of time spent on the
+      assignment, its difficulty, and the ultimate degree of happiness the
+      assignment helped to produce (or lack thereof).
+      Write single digit integers in the appropriate positions (except perhaps for time spent),
+      currently indicated by a 0.
+      If  you do not modify the 0, we will discard it for statistical purposes.
+      <p>
+      Do <font color="red">NOT</font> write anything else on these lines,
+      use the comment section if you would like to say more about time, difficulty
+      or satisfaction.
+      <p>
+
+
+  <li>When you are done, and certain that your program works properly, 
+      hand in your code electronically in your directory in 
+
+      <blockquote>
+      <code>/afs/andrew/course/15/211-1/Dropoff/hw4/&lt;your login name&gt;</code>
+      </blockquote>
+      
+      Files to hand in minimally:
+      <code>graph.h</code>, <code>graph.cc</code>,
+      <code>pqueue.h</code>, <code>pqueue.cc</code>, <code>shortest.cc</code>,
+      <code>questions.txt</code>. 
+      
+      <p>
+
+      If you distribute your code over more files, make sure to submit whatever 
+      is needed for compilation, modify the makefile correspondingly, and submit
+      your makefile together with the code. 
+</ol>
+
+<p>
+
+<font color=red>Do not submit binaries, cores, additional test programs you
+may have written, or anything else!!!</font>
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+<h3>Grading</h3>
+
+This time, non-compilation automatically means disaster in the correctness department.
+See also the Recommendations below. 
+
+<ul>
+  <li>Correctness: 60 pts (30 for the priority queues, 30 for the shortest path algorithm)
+  <li>Style: 20 pts 
+  <li>Questions: 20 pts
+</ul>
+
+Style points will be lost if your program is hard to read:
+poorly commented, not properly indented, bad naming conventions, whatever.
+Make a real effort to write your code in a way that makes it easy for someone
+else to understand what is going on.
+Needless to say, this is also a pre-condition for partial credit. 
+
+<p>
+<hr>
+<!-- --------------------------------------------------------------------------- -->
+<p>
+
+
+<h3>Recommendations</h3>
+
+A word of warning about makefiles:  if you organize your code differently from
+the outline given here, you MUST provide a proper makefile.
+You will lose credit if we cannot even compile your code simply because all
+we get from you is a collection of random C++ files. 
+
+<p>
+<hr>
+<p>
+
+<!-- --------------------------------------------------------------------------- -->
+
+<!-- hhmts start -->
+Last modified: Thu Mar  4 13:44:07 EST 1999
+<!-- hhmts end -->
+sutner
+
+</body>
+</html>
+

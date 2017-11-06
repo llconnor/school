@@ -1,0 +1,40 @@
+#ifndef _PQUE_H_
+#define _PQUE_H_
+
+
+//Required Libraries
+#include <iostream.h>
+#include <string>
+#include <fstream.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <vector.h>
+
+// defined within
+template <class T> class Pque
+{
+ private:
+  vector<T> Tree;
+  int used;
+ public:
+  vector<int> Table;
+  vector<int> From;
+  Pque();
+  ~Pque();
+  void Addnew(T newvalue, int count);
+  void Build(ifstream &infile);
+  T getmin();
+  int getused();
+  bool IsEmpty();
+  int NextEmpty();
+  void Organdown(int place);
+  void Organize(int place);
+  void Print();
+  void PrintTable();
+  void Reorg(int place);
+  bool TableEmp();
+  void Update(int place, T newvalue);
+};
+
+#include "pque.cc"
+#endif

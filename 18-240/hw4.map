@@ -1,0 +1,35 @@
+Symbol definitions in order of occurence : 
+Name		Value
+----		-------
+
+X		3000
+		3001
+		3002
+		3003
+		3004
+		3005
+		3006
+		3007
+		3008
+		3009
+Y		4000
+		4001
+		4002
+		4003
+		4004
+		4005
+		4006
+		4007
+		4008
+		4009
+START		4012
+EXIT		401F
+
+
+Pass 2 Fixup Information : 
+Address	Name
+-------	-----
+
+4019	EXIT
+401E	START
+

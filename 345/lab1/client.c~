@@ -1,0 +1,29 @@
+#include "sock.c"
+#include <iostream.h>
+
+void main()
+{
+  char *p_data;
+  int len;
+  unsigned addr;
+  int errorint;
+
+  p_data = "Hello There";
+  len = 12;
+
+  sock = init_sock(CLIENT_MODE);
+  cout << sock << endl;
+addr = get_addr_by_name("sandpiper.ww.andrew.cmu.edu");
+  cout << strlen(p_data);
+  if(addr == 0xFFFFFFFF)
+  cout << "Address not found" << endl;
+   else
+  {
+        cout << "Address = " << addr << endl;
+      errorint = send_packet(p_data, len, addr);
+            if (errorint == -1)
+	cout << "Error in Transmission" << endl;
+            else
+	cout << "Transmission successful: " << p_data << " sent " << endl;
+      }
+}

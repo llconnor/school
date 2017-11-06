@@ -1,0 +1,30 @@
+Symbol definitions in order of occurence : 
+Name		Value
+----		-------
+
+START		0000
+SUM		2000
+FINISH		200E
+HEAD		3000
+		3001
+FRED		3231
+		3232
+SALLY		4242
+		4243
+SPOT		4747
+		4748
+		5000
+
+
+Pass 2 Fixup Information : 
+Address	Name
+-------	-----
+
+0001	HEAD
+0007	SUM
+2009	FINISH
+200D	SUM
+3001	FRED
+3232	SALLY
+4243	SPOT
+
