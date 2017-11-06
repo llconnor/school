@@ -1,0 +1,24 @@
+/* bigmul.h -- 
+ *
+ * Larry L. Connor  9/17/01
+ * Lab 2
+ */
+#ifndef _BIGMUL_H_
+#define _BIGMUL_H_
+
+#include <iostream.h>
+#include <string>
+#include <stdlib.h>
+#include <vector.h>
+#include <fstream.h>
+
+
+class bigmul
+{
+ public:
+  bigmul();
+  unsigned int a[4];
+  void print();
+};
+
+#endif
